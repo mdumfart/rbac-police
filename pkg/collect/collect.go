@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	_ "k8s.io/client-go/plugin/pkg/client/auth" // in order to connect to clusters via auth plugins
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -56,7 +57,7 @@ func Collect(collectConfig CollectConfig) *CollectResult {
 func initKubeClient() (*kubernetes.Clientset, clientcmd.ClientConfig, error) {
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	kubeConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, &clientcmd.ConfigOverrides{})
-	config, err := kubeConfig.ClientConfig()
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		log.Errorln("initKubeClient: failed creating ClientConfig with", err)
 		return nil, nil, err
@@ -75,12 +76,7 @@ func buildMetadata(clientset *kubernetes.Clientset, kubeConfig clientcmd.ClientC
 		Features: []string{},
 	}
 
-	rawConfig, err := kubeConfig.RawConfig()
-	if err != nil {
-		log.Warnln("getMetadata: failed to get raw kubeconfig", err)
-	} else {
-		metadata.ClusterName = rawConfig.Contexts[rawConfig.CurrentContext].Cluster
-	}
+	metadata.ClusterName = "in-cluster"
 
 	versionInfo, err := clientset.Discovery().ServerVersion()
 	if err != nil {
